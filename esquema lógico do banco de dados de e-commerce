@@ -1,0 +1,118 @@
+-- Criação do banco de dados
+drop database if exists ecommerce;
+create database ecommerce;
+use ecommerce;
+
+-- Tabela de Usuários (Clientes PJ e PF)
+CREATE TABLE Usuarios (
+    id_usuario INT PRIMARY KEY AUTO_INCREMENT,
+    nome VARCHAR(100) NOT NULL,
+    email VARCHAR(100) UNIQUE NOT NULL,
+    senha VARCHAR(255) NOT NULL,
+    tipo ENUM('PF', 'PJ') NOT NULL,
+    cpf_cnpj VARCHAR(14) UNIQUE NOT NULL,
+    data_cadastro TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+-- Tabela de Formas de Pagamento
+CREATE TABLE Formas_Pagamento (
+    id_pagamento INT PRIMARY KEY AUTO_INCREMENT,
+    id_usuario INT,
+    metodo_pagamento ENUM('Cartão de Crédito', 'Boleto', 'Pix', 'Transferência') NOT NULL,
+    FOREIGN KEY (id_usuario) REFERENCES Usuarios(id_usuario) ON DELETE CASCADE
+);
+
+-- Tabela de Produtos
+CREATE TABLE Produtos (
+    id_produto INT PRIMARY KEY AUTO_INCREMENT,
+    nome VARCHAR(100) NOT NULL,
+    descricao TEXT,
+    preco DECIMAL(10,2) NOT NULL,
+    estoque INT NOT NULL,
+    id_fornecedor INT,
+    FOREIGN KEY (id_fornecedor) REFERENCES Fornecedores(id_fornecedor)
+);
+
+-- Tabela de Pedidos
+CREATE TABLE Pedidos (
+    id_pedido INT PRIMARY KEY AUTO_INCREMENT,
+    id_usuario INT,
+    data_pedido TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    status ENUM('Pendente', 'Pago', 'Enviado', 'Entregue', 'Cancelado') NOT NULL,
+    FOREIGN KEY (id_usuario) REFERENCES Usuarios(id_usuario)
+);
+
+-- Tabela de Itens do Pedido
+CREATE TABLE Itens_Pedido (
+    id_item INT PRIMARY KEY AUTO_INCREMENT,
+    id_pedido INT,
+    id_produto INT,
+    quantidade INT NOT NULL,
+    preco_unitario DECIMAL(10,2) NOT NULL,
+    FOREIGN KEY (id_pedido) REFERENCES Pedidos(id_pedido) ON DELETE CASCADE,
+    FOREIGN KEY (id_produto) REFERENCES Produtos(id_produto)
+);
+
+-- Tabela de Entregas
+CREATE TABLE Entregas (
+    id_entrega INT PRIMARY KEY AUTO_INCREMENT,
+    id_pedido INT,
+    status ENUM('Em processamento', 'Despachado', 'Em trânsito', 'Entregue') NOT NULL,
+    codigo_rastreio VARCHAR(50) UNIQUE NOT NULL,
+    FOREIGN KEY (id_pedido) REFERENCES Pedidos(id_pedido) ON DELETE CASCADE
+);
+
+-- Tabela de Fornecedores
+CREATE TABLE Fornecedores (
+    id_fornecedor INT PRIMARY KEY AUTO_INCREMENT,
+    nome VARCHAR(100) NOT NULL,
+    contato VARCHAR(100) NOT NULL
+);
+
+-- Tabela de Vendedores
+CREATE TABLE Vendedores (
+    id_vendedor INT PRIMARY KEY AUTO_INCREMENT,
+    nome VARCHAR(100) NOT NULL,
+    contato VARCHAR(100) NOT NULL
+);
+
+-- Inserção de Dados
+INSERT INTO Usuarios (nome, email, senha, tipo, cpf_cnpj) VALUES
+('João Silva', 'joao@email.com', '123456', 'PF', '12345678901'),
+('Empresa XYZ', 'contato@xyz.com', 'abcdef', 'PJ', '12345678000199');
+
+INSERT INTO Fornecedores (nome, contato) VALUES
+('Tech Distribuidora', 'tech@distribuidora.com'),
+('Mobile Suppliers', 'mobile@suppliers.com');
+
+INSERT INTO Produtos (nome, descricao, preco, estoque, id_fornecedor) VALUES
+('Notebook', 'Notebook Dell i7', 4500.00, 10, 1),
+('Smartphone', 'Samsung Galaxy S21', 3500.00, 15, 2);
+
+INSERT INTO Pedidos (id_usuario, status) VALUES
+(1, 'Pago'),
+(2, 'Pendente');
+
+INSERT INTO Itens_Pedido (id_pedido, id_produto, quantidade, preco_unitario) VALUES
+(1, 1, 1, 4500.00),
+(2, 2, 2, 3500.00);
+
+INSERT INTO Entregas (id_pedido, status, codigo_rastreio) VALUES
+(1, 'Em trânsito', 'BR123456789XYZ');
+
+-- Consultas SQL
+
+-- 1. Quantos pedidos foram feitos por cada cliente?
+SELECT id_usuario, COUNT(*) AS total_pedidos FROM Pedidos GROUP BY id_usuario;
+
+-- 2. Algum vendedor também é fornecedor?
+SELECT V.nome FROM Vendedores V
+JOIN Fornecedores F ON V.nome = F.nome;
+
+-- 3. Relação de produtos, fornecedores e estoques
+SELECT PR.nome AS produto, F.nome AS fornecedor, PR.estoque FROM Produtos PR
+JOIN Fornecedores F ON PR.id_fornecedor = F.id_fornecedor;
+
+-- 4. Relação de nomes dos fornecedores e nomes dos produtos
+SELECT F.nome AS fornecedor, PR.nome AS produto FROM Fornecedores F
+JOIN Produtos PR ON F.id_fornecedor = PR.id_fornecedor;
